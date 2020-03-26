@@ -1,6 +1,6 @@
 """Callback classes"""
 
-from typing import Generator, Coroutine, Callable, Union, Tuple, List
+from typing import Generator, Coroutine, Callable, Union, Tuple, List, Hashable, Dict
 from inspect import iscoroutinefunction
 import asyncio, threading
 
@@ -17,10 +17,10 @@ class BaseCallback:
         The keyword arguments for _func.
     _name:  str property
         The name describing what _func does.
+    _doc: str
+        The docstring override.
     __doc__: str
         The description of _func.
-        NOTE: only custom functions' .__doc__s can be written to. 
-        Errors due to writing to __doc__ will be silenced.
     """
 
     def __init__(self, func: Callable, docString: str = None, name: str = None, args = (), kwargs = {}):
@@ -30,6 +30,7 @@ class BaseCallback:
             The function to execute.
         docString:
             Override the docstring of func.
+            Defaults to the function's docstring.
         name:
             The name of the object. Should describe what the callback does.
         *args, **kwargs:
@@ -40,17 +41,7 @@ class BaseCallback:
         self._kwargs = kwargs
         self._func = func
         self._name = str(name)
-
-        if docString:
-            try:
-                self._func.__doc__ = docString
-
-            except AttributeError:  # __doc__ isn't writable
-                pass
-
-        # ensure docstring
-        if not self._func.__doc__:
-            self._func.__doc__ = ""
+        self._doc = docString
 
 
     def __call__(self):
@@ -68,7 +59,9 @@ class BaseCallback:
     def __doc__(self) -> str:
         """Get the description of _func"""
 
-        return self._func.__doc__
+        if self._doc:  return self._doc
+            
+        else: return self._func.__doc__
 
 
     @property
@@ -160,8 +153,6 @@ class AsyncCallback(BaseCallback):
         return self._coro
 
 
-# in-dev. The flags need to be revised as they're awkward to input
-# example: Callback(((print, False),))
 class Callback:
     """
     High level callback class. Handles converting functions, coroutines, and threads to spawn to callbacks.
@@ -182,58 +173,63 @@ class Callback:
     calls: List[BaseCallback] = []
 
 
-    def __init__(self, funcs: Tuple[Tuple[Callable, bool],], arguments: List[tuple,] = None,
-            daemon: bool = True, keywords: List[dict,] = None):
+    def __init__(self, funcs: Dict[Callable, dict]):
         """
-        NOTE: Pass an empty tuple/dict if a function has no args/kwargs but other functions do.
-        E.G funcs = [func1, func2], args = (tuple(), (True, False)), kwargs = ({arg : True}, {})
-
         ARGUMENTS
         funcs:
-            The function(s) to convert and whether it's to be a thread.
-            Format: [(func, isThread), (func, isThread),].
-            If async or normal: isThread = False
-        arguments:
-            The positional arguments of the funcs.
-        daemon:
-            Option to spawn a daemon thread.
-        keywords:
-            The keyword arguments of funcs. 
+            dict of function : settings dict.
+            settings dict should have these keys:
+                args: the tuple of arguments for the function.
+                kwargs: the dict of keyword arguments for the function.
+                type: string stating whether it's a standard, async, or thread function.
+                    Must be within ('standard', 'async', 'thread').
+                daemon: boolean stating whether it's a daemon thread.
         """ 
 
-        # ensure args and kwargs can be iterated over in parallel to funcs
-        funcsLength = len(funcs)
-        if not keywords:
-            keywords = [ {} ] * funcsLength
+        def setToDefault(target: dict, key: Hashable, defaultValue: Any) -> dict:
+            """
+            For each key in `target`, set `value[key]` to defaultValue
+            if it's falsy or there's a KeyError."""
 
-        if not arguments:
-            arguments = [ () ] * funcsLength
+            # iterate over top level keys
+            for func, settings in target.items():
+                try:
+                    # check value of each key for a falsy value
+                    if not settings[key]:
+                        target[func][key] = defaultValue
 
-        assert len(keywords) == funcsLength == len(arguments)
+                # if the target key doesn't exist, set it to the default value
+                except KeyError:
+                    target[func][key] = defaultValue
 
-        # ensure flags
-        for pair in funcs:
-            try:
-                pair[1]
+            return target
 
-            except (IndexError, TypeError):
-                raise ValueError("func flags are not set.")
         
-        # create Callback objects
-        for i, pair in enumerate(funcs):
-            func, flag, *_ = pair  # discard unexpected arguments
-            args, kwargs = arguments[i], keywords[i]
+        # ensure all keys were passed
+        for set_ in ("args", tuple(), "kwargs", dict(),
+            "daemon", False, "type", "standard"):
+            funcs = setToDefault(funcs, set_[0], set_[1])
 
-            if flag:
-                self.calls.append(ThreadCallback(func, daemon, args = args, kwargs = kwargs))
+        # create calls
+        for func, settings in funcs.items():
+            # choose the callback type
+            type_ = settings["type"]
+            if type_ == "standard":
+                chosenType = BaseCallback
+                
+            elif type_ == "async":
+                chosenType = AsyncCallback
 
-            elif iscoroutinefunction(func):
-                self.calls.append(AsyncCallback(func, args = args, kwargs = kwargs))
+            elif type_ == "thread":
+                chosenType = ThreadCallback
 
             else:
-                self.calls.append(BaseCallback(func, args = args, kwargs = kwargs))
+                raise ValueError(f"Invalid type ({type_})")
 
+            # create instance
+            self.calls.append(chosenType(func, args = settings["args"], kwargs = settings["kwargs"]))
         
+
     def __call__(self) -> List[tuple]:
         """Execute the callback(s) and returns their results"""
 

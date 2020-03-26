@@ -32,33 +32,6 @@ def fillListFromFile(file: str, floatVal: bool, varList: list=[])-> list:
         raise Exception(f"{file} not found")
 
 
-def getKeyFromDict(key: Hashable, target: dict) -> Any:
-    """
-    Recursively search for the key in target and return its value.
-    
-    RAISES
-    KeyError:
-        key is not in the target or its child dictionaries.
-    """
-
-    # hash() used to avoid issues with duplicate keys
-    for currentKey, currentValue in target.items():
-        if key == currentKey:
-            return currentValue  # value found
-
-        try:
-            return getKeyFromDict(key, currentValue)
-
-        # suppress errors raised by child calls
-        # attribute error comes from no .items() method
-        # key error comes from the key not being found by a child call
-        # type error comes from a .items() method returning an unexpected value
-        except (AttributeError, KeyError, TypeError):
-            pass
-
-    raise KeyError("key not found in target")
-
-
 def removeFromDict(original: dict, toRemove: Iterable)-> Tuple[dict, dict]:
     '''Removes the keys of toRemove from the original dictionary.
     Returns the edited dict.

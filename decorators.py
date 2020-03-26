@@ -1,12 +1,13 @@
 """Various decorators."""
 
 from functools import wraps
+from logging import getLogger
 
 def retry(logMsg: str = None, retries: int = 5):
     """Try func for n retries."""
 
     def middle(func):
-        @wraps  # maintain docstring of the wrapped function
+        @wraps(func)  # maintain docstring of the wrapped function
         def inner(*args, **kwargs):
             # convert to function to allow exc_info to be the default
             if not logMsg:
@@ -15,7 +16,7 @@ def retry(logMsg: str = None, retries: int = 5):
             else:
                 logMsgCallable = lambda : logMsg
 
-            log = logging.getLogger()
+            log = getLogger()
 
             # try repeatedly
             for try_ in range(0, retries):

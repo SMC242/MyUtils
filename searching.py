@@ -18,6 +18,7 @@ def binarySearch(search: str, returnBool: bool, file: str=None, varList: list=No
         if fail:
             raise ValueError("No file or list passed into binarySearch")
 
+    # it is a file --> read it
     if not isFile:
         with open(file) as f:
             fileText=f.readlines()
@@ -56,5 +57,6 @@ def binarySearch(search: str, returnBool: bool, file: str=None, varList: list=No
 def sortSearch(targetList: Union[list, tuple], target: Any, returnBool: bool):
     """Wrapper around insertionSort and binarySearch."""
 
+    # sort the list first, then search
     sortedList = insertionSort(targetList)
     return binarySearch(target, returnBool, varList = sortedList)

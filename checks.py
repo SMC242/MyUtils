@@ -1,6 +1,6 @@
 """Validation checks"""
 
-from typing import Iterable, Any
+from typing import Iterable, Any, Container
 
 # old version of CHECKTYPES, left for backwards compatibility
 def validateInput(input: str)->bool:
@@ -8,6 +8,7 @@ def validateInput(input: str)->bool:
     DEPRECATED. Use CHECKTYPES.
     Validates the input string, float, or integer. input is the input to be validated.
     Returns boolean'''
+
     isString=isinstance(input,str)
 
     #strings
@@ -43,17 +44,11 @@ def lengthCheck(value: Any, minLength: int = None, maxLength: int = None) -> boo
         return (len(value) <= maxLength)
 
 
-def withinCheck(value: Any, iterable: Iterable) -> bool:
-    """Check that the value exists in iterable"""
+def withinCheck(value: Any, toCheck: Container) -> bool:
+    """Check that the value exists in iterable.
+    Use lambda: not withinCheck(value, toCheck) to get the inverse."""
 
-    return (value in iterable)
-
-
-# withinCheck() could be used for this but the FormField validation checks for check = True
-def withoutCheck(value: Any, iterable: Iterable) -> bool:
-    """Check that the value doesn't exist in iterable"""
-
-    return (value not in iterable)
+    return (value in toCheck)
 
 
 def typeCheck(value: Any, targetType: type, subclassCheck: bool = False) -> bool:
@@ -67,13 +62,7 @@ def typeCheck(value: Any, targetType: type, subclassCheck: bool = False) -> bool
         return (type(value) is targetType)
 
 
-def isUniqueCheck(value: Any, iterable: Iterable) -> bool:
-    """Check if the value is unqiue against iterable"""
-    pass
-
-
-@staticmethod
-def defaultCheck():
+def defaultCheck(*args, **kwargs):  # absorb any args
     """No check currently but this was added for maintainability."""
 
     return True
@@ -84,8 +73,6 @@ def defaultCheck():
 CHECKTYPES = {
     "lengthCheck" : lengthCheck,
     "withinCheck" : withinCheck,
-    "withoutCheck" : withoutCheck,
     "typeCheck" : typeCheck,
-    "isUniqueCheck" : isUniqueCheck,
     "defaultCheck" : defaultCheck,
     }
