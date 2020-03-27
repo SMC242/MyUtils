@@ -6,11 +6,13 @@ __all__ = [
     "checks",
     "commandLineApp",
     "db",
+    "debugging",
     "decorators",
     "extraUtils",
     "factory",
     "searching",
-    "sorting"
+    "sorting",
+    "TkUtils",
     ]
 
 # some distributions of my library don't include these modules
