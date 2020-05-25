@@ -1,58 +1,64 @@
 """Various searching algorithms."""
 
-from typing import Union, Any
+from typing import Any, List, Callable, Union
 
-def binarySearch(search: str, returnBool: bool, file: str=None, varList: list=None)->Union[int, bool]:
-    '''Binary searches the input file path or list for search.
-    Outputs either the index or a boolean value.
-    returnBool: 
-    file: the string file path to be searched. Defaults to None
-    varList: the list to be searched. Defaults to None'''
+def binarySearch(target: Any, to_search: List[Any], return_type: str = "found",
+                 key: Callable = None) -> Any:
+    """Quickly iterate through the list to find the target.
+    Supports any iterable that allows indexing.
 
-    #ensuring that a file or list is passed in
-    fail=False
+    ARGUMENTS
+        target:
+            The element to find in the list.
+        to_search:
+            The list to find target in.
+        return_type:
+            What to return if target is found.
+            Possible values:
+                found: True if found, False if not found.
+                index: int if found, None if not found.
+                item: the element that contains target if found,
+                    else None
+        key:
+            The callable that takes in an element
+            and returns the value to compare against target.
+            Defaults to lambda ele: ele"""
+    # verify return_type
+    if return_type not in ("found", "index", "item"):
+        raise ValueError("Invalid return_type. See the docstring")
 
-    isFile=file is None
-    if isFile is True:
-        fail=varList is None
-        if fail:
-            raise ValueError("No file or list passed into binarySearch")
-
-    # it is a file --> read it
-    if not isFile:
-        with open(file) as f:
-            fileText=f.readlines()
-            lines=[]
-            for item in fileText:
-                newItem=item.strip("\n")
-                lines.append(newItem)
-
-    else:
-        lines=varList
+    # default value for key
+    if not key:
+        key = lambda ele: ele
 
     #standard binary search algorithm
     lower=0
-    upper=len(lines)-1
+    upper=len(to_search) - 1
     found=False
 
     while lower<=upper and not found:
-        mid=(lower+upper)//2  # find midpoint
-        current = lines[mid]  # accessing a stored variable is faster than accessing a list index
+        mid=lower + (upper - lower)//2  # find midpoint
+        current = key(to_search[mid])  # accessing a stored variable is faster than accessing a list index
 
-        if current==search:  # found
-            found=True
+        if current < target:  # search is right of midpoint -> create higher midpoint
+            lower = mid + 1
 
-        elif search< current:  # search is left of midpoint -> create lower midpoint
+        elif current > target:  # search is left of midpoint -> create lower midpoint
             upper=mid-1
 
-        else:  # search is right of midpoint -> create higher midpoint
-            lower=mid+1
+        else:
+            found=True
 
-    if returnBool:#returns boolean
+    # if not return bool, check the other types
+    if return_type == "found":
         return found
-    else:#returns index
-        return mid
-
+    if found:
+        if return_type == "index":
+            return mid
+        if return_type == "item":
+            return to_search[mid]
+    else:
+        return None
 
 def sortSearch(targetList: Union[list, tuple], target: Any, returnBool: bool):
     """Wrapper around insertionSort and binarySearch."""
